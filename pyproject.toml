@@ -14,5 +14,8 @@ dev = [
     "pytest-cov>=7.0.0",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["src/"]
+
 [tool.hatch.envs.default.scripts]
 test = "pytest --cov=dotfiles_manager src/tests/"
