@@ -19,3 +19,10 @@ pythonpath = ["src/"]
 
 [tool.hatch.envs.default.scripts]
 test = "pytest --cov=dotfiles_manager src/tests/"
+testlog = """
+    pytest \
+        --no-header \
+        --log-level=DEBUG --log-cli-level=DEBUG \
+        --capture=no \
+        src/tests/{args}
+"""
