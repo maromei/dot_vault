@@ -53,7 +53,6 @@ class XDGUserDirectories:
 
         return xdg_path
 
-    @property
     @classmethod
     def home(cls) -> Path:
         home_val = os.environ.get("HOME")
@@ -67,22 +66,18 @@ class XDGUserDirectories:
             )
         return home_path
 
-    @property
     @classmethod
     def config(cls) -> Path:
         return cls.__build_path_with_home_and_uid(XDGUserDefaults.XDG_CONFIG_HOME)
 
-    @property
     @classmethod
     def cache(cls) -> Path:
         return cls.__build_path_with_home_and_uid(XDGUserDefaults.XDG_CACHE_HOME)
 
-    @property
     @classmethod
     def data(cls) -> Path:
         return cls.__build_path_with_home_and_uid(XDGUserDefaults.XDG_DATA_HOME)
 
-    @property
     @classmethod
     def state(cls) -> Path:
         return cls.__build_path_with_home_and_uid(XDGUserDefaults.XDG_STATE_HOME)
