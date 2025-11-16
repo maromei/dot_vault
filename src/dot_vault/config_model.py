@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Callable, Self
 
 from pydantic import BaseModel, ConfigDict, FilePath, ValidationError, Field
-from result import Err, Result, as_result
+from returns.result import Failure, Result, Success
 
 type __ParsedConfigFunc = Callable[[str], Result[Config, ValidationError]]
 
@@ -25,9 +25,12 @@ class Config(BaseModel):
     def __model_validate_json_as_result(
         cls, json_str: str
     ) -> Result[Self, ParseConfigError]:
-        fnc: __ParsedConfigFunc = as_result(ValidationError)(Config.model_validate_json)
-        res: Result[Self, ValidationError] = fnc(json_str)
-        return res.map_err(lambda e: ParseConfigError(e))
+        try:
+            result = Config.model_validate_json(json_str)
+        except ValidationError as e:
+            error_obj = ParseConfigError(e)
+            return Failure(error_obj)
+        return Success(result)
 
     @classmethod
     def from_json_str(cls, json_str: str) -> Result[Self, ParseConfigError]:
@@ -40,6 +43,6 @@ class Config(BaseModel):
                 file_content = file_connection.read()
         except OSError as e:
             error_obj = ParseConfigError(e)
-            return Err(error_obj)
+            return Failure(error_obj)
 
         return cls.__model_validate_json_as_result(file_content)

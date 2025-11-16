@@ -2,7 +2,8 @@ import logging
 from pathlib import Path
 
 from pydantic import ValidationError
-from result import Err, Ok, Result, is_err, is_ok
+from returns.result import Result, Success, Failure
+from returns.pipeline import is_successful
 
 from dot_vault.config_model import Config, ParseConfigError, File
 
@@ -50,13 +51,13 @@ class TestFile:
 def test_empy_file_list():
     file_content: str = '{"files": []}'
     model: Result[Config, ValidationError] = Config.from_json_str(file_content)
-    assert is_ok(model)
+    assert is_successful(model)
 
 
 def test_incomplete_file_info():
     file_content: str = '{"files": [{}]}'
     model: Result[Config, ValidationError] = Config.from_json_str(file_content)
-    assert is_err(model)
+    assert not is_successful(model)
 
 
 class TestConfigFromJson:
@@ -67,9 +68,9 @@ class TestConfigFromJson:
         res: Result[Config, ParseConfigError] = Config.from_json(some_dir)
 
         match res:
-            case Ok(value):
+            case Success(value):
                 assert False, f"An error should have been returned. Instead got {value}"
-            case Err(e):
+            case Failure(e):
                 assert isinstance(e, ParseConfigError)
                 source = e.source
                 type_annotation = ParseConfigError.__annotations__["source"]
@@ -83,9 +84,9 @@ class TestConfigFromJson:
         res: Result[Config, ParseConfigError] = Config.from_json(some_file)
 
         match res:
-            case Ok(value):
+            case Success(value):
                 assert False, f"An error should have been returned. Instead got {value}"
-            case Err(e):
+            case Failure(e):
                 assert isinstance(e, ParseConfigError)
                 source = e.source
                 type_annotation = ParseConfigError.__annotations__["source"]
@@ -99,4 +100,4 @@ class TestConfigFromJson:
             file.write(get_some_valid_config_json_string())
 
         res: Result[Config, ParseConfigError] = Config.from_json(some_file)
-        assert is_ok(res)
+        assert is_successful(res)
