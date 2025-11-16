@@ -3,8 +3,8 @@ import platform
 from pathlib import Path
 from typing import Optional
 
-from returns.result import Result, Failure, Success
-from returns.pipeline import is_successful
+from returns.maybe import Maybe
+from returns.result import Failure, Result, Success
 
 from dot_vault.constants import LIB_NAME
 from dot_vault.xdg_directories import XDGUserDirectories
@@ -14,11 +14,11 @@ def get_username() -> str:
     return os.getlogin()
 
 
-def get_hostname() -> Result[str, OSError]:
+def get_hostname() -> Result[str, str]:
     hostname: str = platform.node()
     if hostname == "":
         msg = "Could not determine the hostname."
-        return Failure(OSError(msg))
+        return Failure(msg)
     return Success(hostname)
 
 
@@ -29,22 +29,16 @@ def get_dotfile_library_path() -> Path:
 
 def get_local_dotfile_library_path(
     user: Optional[str] = None, hostname: Optional[str] = None
-) -> Result[Path, OSError]:
+) -> Result[Path, str]:
     if user is None:
         user: str = get_username()
 
-    match hostname:
-        case None:
-            hostname: Result[str, OSError] = get_hostname()
-        case str():
-            hostname: Result[str, OSError] = Success(hostname)
-        case _:
-            raise TypeError(f"`hostname` has an invalid type of '{type(hostname)}'")
+    hostname: Maybe[str] = Maybe.from_optional(hostname)
+    hostname: Maybe[Success[str]] = hostname.map(Success)
+    hostname: Result[str, str] = hostname.value_or(get_hostname())
 
-    if not is_successful(hostname):
-        return hostname
+    def generate_path(host: str) -> Path:
+        return get_dotfile_library_path() / user / host
 
-    hostname: Success[str]
-    libpath: Path = get_dotfile_library_path() / user / hostname.ok_value
-
-    return Success(libpath)
+    libpath: Result[Path, str] = hostname.map(generate_path)
+    return libpath
