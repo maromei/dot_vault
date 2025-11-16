@@ -13,6 +13,7 @@ dependencies = [
 dev = [
     "hatch>=1.15.1",
     "pytest-cov>=7.0.0",
+    "ty>=0.0.1a26",
 ]
 
 [tool.pytest.ini_options]
@@ -27,3 +28,8 @@ testlog = """
         --capture=no \
         src/tests/{args}
 """
+typecheck = "ty check"
+check = [
+    "hatch run test",
+    "hatch run typecheck"
+]
