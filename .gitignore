@@ -8,6 +8,7 @@ wheels/
 
 # pytest-cov
 .coverage
+.pytest_cache/
 
 # Virtual environments
 .venv
