@@ -1,5 +1,5 @@
 [project]
-name = "dotfile-manager"
+name = "dot_vault"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -19,7 +19,7 @@ dev = [
 pythonpath = ["src/"]
 
 [tool.hatch.envs.default.scripts]
-test = "pytest --cov=dotfiles_manager src/tests/"
+test = "pytest --cov=dot_vault src/tests/"
 testlog = """
     pytest \
         --no-header \

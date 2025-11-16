@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic import ValidationError
 from result import Err, Ok, Result, is_err, is_ok
 
-from dotfiles_manager.config_model import Config, ParseConfigError, File
+from dot_vault.config_model import Config, ParseConfigError, File
 
 CONFIG_PATH = Path("dotfile_sync_conf.json")
 LOGGER = logging.getLogger()
