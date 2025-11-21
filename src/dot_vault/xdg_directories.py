@@ -30,7 +30,7 @@ class XDGUserDirectories:
         if not is_linux and uid_is_needed:
             raise OSError(
                 f"Cannot generate the '{default.name}' value. A UID is needed, "
-                "which is only available on Linux platforms."
+                + "which is only available on Linux platforms."
             )
 
         uid = ""
@@ -42,10 +42,9 @@ class XDGUserDirectories:
 
     @classmethod
     def __build_path_with_home_and_uid(cls, default: XDGUserDefaults) -> Path:
-        env_var = os.environ.get(default.name)
-
-        if env_var is None:
-            env_var: str = cls.__format_default_string(default)
+        env_var: str = os.environ.get(
+            default.name, cls.__format_default_string(default)
+        )
 
         xdg_path = Path(env_var)
         if not xdg_path.is_dir():
@@ -62,7 +61,7 @@ class XDGUserDirectories:
         if not home_path.is_dir():
             raise ValueError(
                 "The $HOME environment varibale points "
-                f"to an invalid directory '{home_path}'"
+                + f"to an invalid directory '{home_path}'"
             )
         return home_path
 
