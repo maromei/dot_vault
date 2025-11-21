@@ -6,12 +6,14 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "pydantic>=2.12.4",
-    "returns>=0.26.0",
+    "returns[compatible-mypy]>=0.26.0",
 ]
 
 [dependency-groups]
 dev = [
+    "basedpyright>=1.34.0",
     "hatch>=1.15.1",
+    "mypy>=1.17.1",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
     "ty>=0.0.1a26",
@@ -19,6 +21,11 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["src/"]
+
+[tool.mypy]
+plugins = [
+    "mypy.plugins.proper_plugin",
+]
 
 [tool.hatch.envs.default.scripts]
 test = "pytest --cov=dot_vault src/tests/"
