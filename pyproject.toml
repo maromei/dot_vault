@@ -16,7 +16,6 @@ dev = [
     "mypy>=1.17.1",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
-    "ty>=0.0.1a26",
 ]
 
 [tool.pytest.ini_options]
