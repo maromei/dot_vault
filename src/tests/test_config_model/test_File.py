@@ -41,3 +41,12 @@ def test_file_valid_input(tmp_path: Path):
         assert True
     except ValidationError:
         assert False, "The file exists, and should be parsed without issue."
+
+
+def test_name(tmp_path: Path):
+    some_path = tmp_path / "some_file.txt"
+    with open(some_path, "w+") as file:
+        _ = file.write("Content.")
+
+    name = "A name"
+    json_obj = {"path": str(some_path.resolve()), "name": "some-name"}

@@ -7,13 +7,18 @@ import re
 import pytest
 from pydantic import ValidationError
 
-from dot_vault.config_model import ONLYON_USERHOST_PATTERN, OnlyOn
+from dot_vault.config_model import OnlyOn
 
 LOGGER = logging.getLogger(__name__)
 
 
 def test_only_on_userhost_pattern():
-    pattern = re.compile(ONLYON_USERHOST_PATTERN)
+    userhost_pattern = OnlyOn.build_userhost_pattern()
+    pattern = re.compile(userhost_pattern)
+
+    # Simply check for the '-' character, as it not included by default in the
+    # \w regex modifier.
+    assert pattern.match("-@-") is not None
 
     assert pattern.match("NoAtSymbol") is None
     assert pattern.match("@") is None
