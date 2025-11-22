@@ -139,8 +139,8 @@ class File(BaseModel):
     name_internal: str | None = Field(default=None, alias="name", exclude=True)
     only_on: OnlyOn = Field(default_factory=OnlyOn)
 
-    @property
     @computed_field
+    @property
     def name(self) -> Maybe[str]:
         return Maybe.from_optional(self.name_internal)
 
