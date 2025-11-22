@@ -1,50 +1,18 @@
+"""Test for the [`Config`][dot_vault.config_model.Config] pydantic model."""
+
 import logging
 from pathlib import Path
 
-from pydantic import ValidationError
 from returns.pipeline import is_successful
 from returns.result import Failure, Result, Success
 
-from dot_vault.config_model import Config, File, ParseConfigError
+from dot_vault.config_model import Config, ParseConfigError
 
-CONFIG_PATH = Path("dotfile_sync_conf.json")
-LOGGER = logging.getLogger()
+LOGGER = logging.getLogger(__name__)
 
 
 def get_some_valid_config_json_string() -> str:
     return '{"files": []}'
-
-
-class TestFile:
-    def test_file_non_existant_path(self, tmp_path: Path):
-        some_path = tmp_path / "does_not_exist.txt"
-
-        try:
-            _ = File(path=some_path)
-            assert False, "A validation Error should occur on a non-existant path."
-        except ValidationError:
-            assert True
-
-    def test_file_dir_as_input(self, tmp_path: Path):
-        some_dir = tmp_path / "some_dir"
-        some_dir.mkdir()
-
-        try:
-            _ = File(path=some_dir)
-            assert False, "A validation Error should occur on a directory as input."
-        except ValidationError:
-            assert True
-
-    def test_file_valid_input(self, tmp_path: Path):
-        some_path = tmp_path / "some_file.txt"
-        with open(some_path, "w+") as file:
-            _ = file.write("Content.")
-
-        try:
-            _ = File(path=some_path)
-            assert True
-        except ValidationError:
-            assert False, "The file exists, and should be parsed without issue."
 
 
 def test_empy_file_list():

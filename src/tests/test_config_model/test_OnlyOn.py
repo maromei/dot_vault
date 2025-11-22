@@ -1,10 +1,15 @@
+"""Tests specifically for the [`OnlyOn`][dot_vault.config_model.OnlyOn] pydantic model."""
+
 import json
+import logging
 import re
 
 import pytest
 from pydantic import ValidationError
 
 from dot_vault.config_model import ONLYON_USERHOST_PATTERN, OnlyOn
+
+LOGGER = logging.getLogger(__name__)
 
 
 def test_only_on_userhost_pattern():
