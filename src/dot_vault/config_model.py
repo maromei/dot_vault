@@ -1,15 +1,122 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, ClassVar
+from typing import Callable, ClassVar, Final
 
-from pydantic import BaseModel, ConfigDict, Field, FilePath, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FilePath,
+    ValidationError,
+    computed_field,
+    field_validator,
+)
+from returns.maybe import Maybe
 from returns.result import Failure, Result, Success
 
 type __ParsedConfigFunc = Callable[[str], Result[Config, ValidationError]]
 
 
+ONLYON_USERHOST_PATTERN: Final[str] = r"((^\w+@$)|(^@\w+$)|(^\w+@\w+$))"
+"""Validate partial `user@host` string.
+
+This regex is used to validate strings in the format `user@host`, `@host`, or `user@`.
+See [`OnlyOn.userhost`][dot_vault.config_model.OnlyOn.userhost]
+"""
+
+
+class OnlyOn(BaseModel):
+    """Specify user and hostname combinations to signal limited applicability.
+
+    The class provides three lists. Each entry represents one allowed value.
+    F.e. `username = ["yuki", "emi", "pommy"]` means all of these users are
+    allowed to do whatever this object is attached to, regardless of their hostname.
+
+    The `userhost` attribute allows for combinations of user and hostname to be more
+    specific. F.e. `userhost = ["pommy@pommys-pad]` will only allow this specific
+    combination. Partial definitions are allowed aswell, which is denoted via an `@`
+    symbol. Meaning the following definitions are equivalent::
+
+        OnlyOn(username=["emi"], hostname=["yukis-yacht"], userhost=["pommy@pommys-pad"])
+        OnlyOn(userhost=["emi@", "@yukis-yacht", "pommy@pommys-pad"])
+
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    username: list[str] = Field(default_factory=list)  #: Allowed usernames.
+    hostname: list[str] = Field(default_factory=list)  #: Allowed hostnames.
+
+    #: Allowed user hostname combinations.
+    #:
+    #: User and hostname are divided via the `@` symbol: `user@hostname`.
+    #: Partial definitions are allowed aswell. Meaning `userhost = ["@hostname"]` is
+    #: the same as `hostname = ["hostname"]` and `userhost = ["user@"]` is the same as
+    #: `username = ["user"]`
+    #:
+    #: Each entry in this list will use the
+    #: [`OnlyOn.userhost_entries_staisfy_pattern`][dot_vault.config_model.OnlyOn.userhost_entries_staisfy_pattern]
+    #: validator to check for compliance of the format.
+    userhost: list[str] = Field(default_factory=list)
+
+    @field_validator("userhost", mode="after")
+    @classmethod
+    def userhost_entries_satisfy_pattern(cls, userhost_list: list[str]) -> list[str]:
+        """Check that each entry in the `hostname` field is correctly formatted.
+
+        Every entry will be validated using the :py:data:`ONLYON_USERHOST_PATTERN`
+        regex pattern.
+
+        Args:
+            userhost_list: List to validate.
+
+        Raises:
+            ValueError: If any of the values in the list do not match the pattern.
+                Every single value will be checked. If more than one value
+                are invalid, all of them will appear in the error message.
+
+        Returns:
+            The validated list if validation was sucessful.
+
+        """
+        pattern = re.compile(ONLYON_USERHOST_PATTERN)
+        invalid_entries: list[str] = list()
+        for entry in userhost_list:
+            match = pattern.match(entry)
+            if match is None:
+                invalid_entries.append(entry)
+
+        if (len(invalid_entries)) == 0:
+            return userhost_list
+
+        invalid_entries = [f"'{entry}'" for entry in invalid_entries]
+        entry_list_str: str = ", ".join(invalid_entries)
+        entry_singular_plural = "entry"
+
+        if len(invalid_entries) > 1:
+            entry_singular_plural = "entries"
+            entry_list_str = f"[{entry_list_str}]"
+
+        error_msg = (
+            f"The userhost {entry_singular_plural} {entry_list_str} does not meet "
+            + "the required pattern of 'user@host'."
+        )
+        raise ValueError(error_msg)
+
+
 class File(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        extra="forbid", arbitrary_types_allowed=True
+    )
     path: FilePath
+    name_internal: str | None = Field(default=None, alias="name", exclude=True)
+    only_on: OnlyOn = Field(default_factory=OnlyOn)
+
+    @property
+    @computed_field
+    def name(self) -> Maybe[str]:
+        return Maybe.from_optional(self.name_internal)
 
 
 @dataclass
