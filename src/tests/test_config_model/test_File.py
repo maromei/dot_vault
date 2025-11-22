@@ -1,9 +1,12 @@
 """Tests specifically for the [`File`][dot_vault.config_model.File] pydantic model."""
 
+import json
 import logging
 from pathlib import Path
 
+import pytest
 from pydantic import ValidationError
+from returns.maybe import Some
 
 from dot_vault.config_model import File
 
@@ -48,5 +51,11 @@ def test_name(tmp_path: Path):
     with open(some_path, "w+") as file:
         _ = file.write("Content.")
 
-    name = "A name"
-    json_obj = {"path": str(some_path.resolve()), "name": "some-name"}
+    name = "some-name"
+    json_obj = {"path": str(some_path.resolve()), "name": name}
+    file = File.model_validate_json(json.dumps(json_obj))
+    assert file.name == Some(name)
+
+    json_obj = {"path": str(some_path.resolve()), "name": "some name"}
+    with pytest.raises(ValidationError):
+        _ = File.model_validate_json(json.dumps(json_obj))
