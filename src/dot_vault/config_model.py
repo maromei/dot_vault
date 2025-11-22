@@ -1,7 +1,8 @@
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, ClassVar
+from typing import Any, Callable, ClassVar, Final, cast
 
 from pydantic import (
     BaseModel,
@@ -9,13 +10,20 @@ from pydantic import (
     Field,
     FilePath,
     ValidationError,
+    ValidationInfo,
+    ValidatorFunctionWrapHandler,
     computed_field,
     field_validator,
 )
 from returns.maybe import Maybe
 from returns.result import Failure, Result, Success
 
+from dot_vault.file_access import get_hostname, get_username
+
 type __ParsedConfigFunc = Callable[[str], Result[Config, ValidationError]]
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class OnlyOn(BaseModel):
@@ -85,6 +93,50 @@ class OnlyOn(BaseModel):
         combined_options = "|".join(options)
         return combined_options
 
+    def generate_full_allowed_set(self) -> set[str]:
+        """Generate a set of allowed username-hostname combinations.
+
+        Returns:
+            A set with valid usernames and/or hostnames. All values are specified with
+            the `@` character, including partially defined combinations.
+            Meaning, the following characters are possible:
+            `user@`, `@hostname`, `user@hostname`
+
+        """
+        users = {f"{user}@" for user in self.username}
+        hosts = {f"@{host}" for host in self.hostname}
+
+        userhosts = set(self.userhost)
+        userhosts = userhosts.union(users).union(hosts)
+
+        return userhosts
+
+    def is_allowed(
+        self, username: str | None = None, hostname: str | None = None
+    ) -> bool:
+        """Check whether the given username@hostname combination is allowed.
+
+        Returns:
+            If either the username or hostname is found in its respective list,
+            or if the specific combination is found in the `hostname` list.
+
+        """
+        all_allowed_values: set[str] = self.generate_full_allowed_set()
+        set_to_check: set[str] = set()
+
+        if username is not None:
+            set_to_check.add(f"{username}@")
+
+        if hostname is not None:
+            set_to_check.add(f"@{hostname}")
+
+        if username is not None and hostname is not None:
+            userhost = f"{username}@{hostname}"
+            set_to_check.add(userhost)
+
+        intersection: set[str] = all_allowed_values.intersection(set_to_check)
+        return len(intersection) != 0
+
     @field_validator("userhost", mode="after")
     @classmethod
     def userhost_entries_satisfy_pattern(cls, userhost_list: list[str]) -> list[str]:
@@ -132,11 +184,42 @@ class OnlyOn(BaseModel):
 
 
 class File(BaseModel):
+    """A single file.
+
+    The [`path`][dot_vault.config_model.File.path] will be checked for existance,
+    if the current [`user`][dot_vault.file_access.get_username] and
+    [`hostname`][dot_vault.file_access.get_hostname] combination is mentioned in the
+    [`only_on`][dot_vault.config_model.File.only_on] field, or if the
+    [`only_on`][dot_vault.config_model.File.only_on] field is not specified.
+
+    Note:
+        You can pass an empty dictionary to the
+        [`only_on`][dot_vault.config_model.File.only_on] field to never check for
+        the existance of the given file.
+    """
+
     model_config: ClassVar[ConfigDict] = ConfigDict(
         extra="forbid", arbitrary_types_allowed=True
     )
+
+    #: Internal definition for [`only_on`][dot_vault.config_model.File.only_on].
+    #
+    #: Due to the path validation, this field has to be defined above the `path` field.
+    #: See [`File.check_path_only_on`][dot_vault.config_model.File.check_path_only_on].
+    only_on_internal: OnlyOn | None = Field(default=None, alias="only_on")
+
+    #: The path to the file.
+    #:
+    #: Will be checked for existance if the current system (username / hostname) is
+    #: found in the [`only_on`][dot_vault.config_model.File.only_on] field.
+    #:
+    #: For the path validation via
+    #: [`File.check_path_only_on`][dot_vault.config_model.File.check_path_only_on]
+    #: to work, this field has to be defined after the
+    #: [`only_on_internal`][dot_vault.config_model.File.only_on_internal] field.
+    #: See [`File.check_path_only_on`][dot_vault.config_model.File.check_path_only_on]
+    #: for more details.
     path: FilePath
-    only_on: OnlyOn = Field(default_factory=OnlyOn)
 
     #: Internal representation of the `name` property.
     #:
@@ -161,6 +244,92 @@ class File(BaseModel):
         the '-' character.
         """
         return Maybe.from_optional(self.name_internal)
+
+    @computed_field
+    @property
+    def only_on(self) -> Maybe[OnlyOn]:
+        """Defines on which username / hostname the file should be found.
+
+        Property wrapper around the
+        [`only_on_internal`][dot_vault.config_model.File.only_on_internal] field,
+        to return it as a [`Maybe`][returns.maybe.Maybe] type.
+
+        If the entry is not specified, it is assumed to always be found.
+        If the entry is specified but empty, the file i assumed to never be found.
+        """
+        return Maybe.from_optional(self.only_on_internal)
+
+    @field_validator("path", mode="wrap")
+    @classmethod
+    def check_path_only_on(
+        cls,
+        value: Any,  # pyright: ignore [reportAny, reportExplicitAny]
+        handler: ValidatorFunctionWrapHandler,
+        values: ValidationInfo,
+    ) -> Path:
+        """Validator for the file path.
+
+        Checks whether the file exists, if the current username / hostname
+        is found in the [`only_on`][dot_vault.config_model.File.only_on] field or
+        if [`only_on`][dot_vault.config_model.File.only_on] is `Nothing`.
+
+        Due to the dependency on the [`only_on`][dot_vault.config_model.File.only_on]
+        field, it needs to be specified before the
+        [`path`][dot_vault.config_model.File.path] field, otherwise it will not
+        be present in the `values` parameter, which will be passed to the function
+        from `pydantic`.
+
+        Args:
+            value: The value to be validated.
+            handler: `pydantic` validation handler.
+            values: `pydantic` object containing information about the fields and
+                the object to be generated.
+
+        Returns:
+            The validated path.
+
+        Raises:
+            ValueError: If the fields for retrieving the validated `only_on` field
+                cannot be found.
+            Exception: Generically raises an exception if the conversion of
+                the value to a path failes, if no existance checks via pydantic is done.
+
+        """
+
+        existing_fields: dict[str, Any] = values.data  # pyright: ignore [reportExplicitAny]
+        only_on_key: Final[str] = "only_on_internal"
+        only_on_key_present: bool = only_on_key in existing_fields.keys()
+
+        if not only_on_key_present:
+            raise ValueError(
+                f"Error when validating the file path '{value}'. "
+                + f"Unable to find the '{only_on_key}' field."
+            )
+
+        only_on_optional: OnlyOn | None = existing_fields.get(only_on_key)
+        only_on: Maybe[OnlyOn] = Maybe.from_optional(only_on_optional)
+
+        username: str = get_username()
+        hostname: str | None = get_hostname().value_or(None)
+
+        def map_allowed(only_on: OnlyOn):
+            return only_on.is_allowed(username=username, hostname=hostname)
+
+        maybe_allowed: Maybe[bool] = only_on.map(map_allowed)
+        is_allowed: bool = maybe_allowed.value_or(True)
+
+        if is_allowed:
+            return cast(Path, handler(value))
+
+        # The only validation done here, is whether the `Path` object can be created.
+        # The error is reraised as a `ValueError`, so `pydantic` will internally deal
+        # with it and translate it to a `ValidationError`.
+        try:
+            path = Path(value)  # pyright: ignore [reportAny]
+        except Exception as e:
+            raise ValueError(e)
+
+        return path
 
 
 @dataclass

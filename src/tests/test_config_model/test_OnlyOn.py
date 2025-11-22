@@ -82,3 +82,27 @@ class TestUserHostnameListValidation:
 
         with pytest.raises(ValidationError, match=error_match):
             _ = OnlyOn.model_validate_json(json.dumps(obj))
+
+
+def test_is_allowed():
+    """Test the [`dot_vault.config_model.OnlyOn.is_allowed()`] method.
+
+    Also implicitely the [`dot_vault.config_model.OnlyOn.generate_full_allowed_set()`]
+    due to its current implementation.
+
+    """
+    only_on = OnlyOn(
+        username=["emi"], hostname=["yukis-yacht"], userhost=["pommy@pommys-pad"]
+    )
+
+    assert only_on.is_allowed(username="emi")
+    assert not only_on.is_allowed(hostname="emis-estate")
+    assert only_on.is_allowed(username="emi", hostname="emis-estate")
+
+    assert not only_on.is_allowed(username="yuki")
+    assert only_on.is_allowed(hostname="yukis-yacht")
+    assert only_on.is_allowed(username="yuki", hostname="yukis-yacht")
+
+    assert not only_on.is_allowed(username="pommy")
+    assert not only_on.is_allowed(hostname="pommys-pad")
+    assert only_on.is_allowed(username="pommy", hostname="pommys-pad")
