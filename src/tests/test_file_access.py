@@ -1,11 +1,17 @@
 import logging
 from pathlib import Path
 
+import pytest
 from pytest_mock import MockerFixture
 from returns.result import Success
 
 from dot_vault.constants import LIB_NAME
-from dot_vault.file_access import get_local_dotfile_library_path, get_username
+from dot_vault.file_access import (
+    LongWindowsPathPrefixNotSupported,
+    get_local_dotfile_library_path,
+    get_username,
+    path_as_relative,
+)
 from dot_vault.xdg_directories import XDGUserDirectories
 
 LOGGER = logging.getLogger(__name__)
@@ -26,3 +32,29 @@ class TestLibraryPaths:
         path = Path(path_str)
 
         assert value == Success(path)
+
+
+def test_path_as_relative():
+    paths = ("/var/config", "C:/drive/windows", "//network/drive/path")
+    results = ("var/config", "C/drive/windows", "network/drive/path")
+
+    def check_success(input, output):
+        for i, o in zip(input, output):
+            assert Success(Path(o)) == path_as_relative(Path(i))
+
+    def check_failure(input, output):
+        for i, o in zip(input, output):
+            with pytest.raises(LongWindowsPathPrefixNotSupported):
+                raise path_as_relative(Path(i)).failure()
+
+    def add_long_win_path(str_):
+        return f"//?/{str_}"
+
+    def to_backwards_slash(str_):
+        return str_.replace("/", "\\")
+
+    check_success(paths, results)
+    check_success([to_backwards_slash(p) for p in paths], results)
+
+    check_failure([add_long_win_path(p) for p in paths], results)
+    check_failure([to_backwards_slash(add_long_win_path(p)) for p in paths], results)
