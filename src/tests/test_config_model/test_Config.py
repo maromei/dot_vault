@@ -1,12 +1,13 @@
 """Test for the [`Config`][dot_vault.config_model.Config] pydantic model."""
 
+import json
 import logging
 from pathlib import Path
 
 from returns.pipeline import is_successful
 from returns.result import Failure, Result, Success
 
-from dot_vault.config_model import Config, ParseConfigError
+from dot_vault.config_model import Config, File, OnlyOn, ParseConfigError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,3 +69,26 @@ class TestConfigFromJson:
 
         res: Result[Config, ParseConfigError] = Config.from_json(some_file)
         assert is_successful(res)
+
+
+def test_file_name_as_key_validator():
+    json_obj: dict[str, str] = {
+        "files": {
+            "file_name_1": {"path": "/some/path_1", "only_on": {}},
+            "file_name_2": {"path": "/some/path_2", "only_on": {}},
+        }
+    }
+    json_str: str = json.dumps(json_obj)
+
+    expected_file_list = Config(
+        files=(
+            File(name="file_name_1", path="/some/path_1", only_on=OnlyOn()),
+            File(name="file_name_2", path="/some/path_2", only_on=OnlyOn()),
+        )
+    )
+
+    parsed_config_result = Config.from_json_str(json_str)
+    assert is_successful(parsed_config_result)
+
+    parsed_config: Config = parsed_config_result.unwrap()
+    assert parsed_config == expected_file_list

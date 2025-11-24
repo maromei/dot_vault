@@ -2,7 +2,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Final, cast
+from typing import Any, Callable, ClassVar, Final, TypeVar, cast
 
 from pydantic import (
     BaseModel,
@@ -14,6 +14,7 @@ from pydantic import (
     ValidatorFunctionWrapHandler,
     computed_field,
     field_validator,
+    model_validator,
 )
 from returns.maybe import Maybe
 from returns.result import Failure, Result, Success
@@ -24,6 +25,86 @@ type __ParsedConfigFunc = Callable[[str], Result[Config, ValidationError]]
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def field_as_key_validator(
+    values: dict[str, Any], list_field_name: str, field_name: str
+) -> dict[str, Any]:
+    """Transform nested dicts to a list of dicts with the first level key as an item.
+
+    This validator is intended to be used with Pydantic's
+    `model_validator(mode="before")`.
+
+    The function transforms
+
+    ```python
+    values = {
+        "{list_field_name}": {
+            "value_1": {...},
+            "value_2": {...},
+        }
+    }
+    ```
+
+    to
+
+    ```python
+    values = {
+        "{list_field_name}": [
+            {"{field_name}": "value_1", ...},
+            {"{field_name}": "value_2", ...},
+        ]
+    }
+    ```
+
+    Args:
+        values: The dictionary of values being validated by Pydantic.
+        list_field_name: The name of the field in `values` that contains the nested
+            dictionaries to be transformed.
+        field_name: The item key, to which the first level key should be assigned.
+
+    Returns:
+        If the object at `list_field_name` does not confom to the
+        `dict[str, dict]` signature, no modifications are done, and the `values`
+        input are returned as-is. Otherwise the described modification is done
+        to the `values` input and returned.
+
+    Raises:
+        ValueError: If `list_field_name` is not found in the `values` dictionary.
+
+    """
+    UnknownObj = TypeVar("UnknownObj")
+
+    if list_field_name not in values.keys():
+        value_str: str = repr(values)
+        raise ValueError(
+            "Error when setting a keyname as a Model field:\n"
+            f"Could not find list_field_name '{list_field_name}' in the values "
+            f"dictionary:\n{value_str}"
+        )
+
+    list_field: dict[Any, Any] | UnknownObj = values[list_field_name]
+    if not isinstance(list_field, dict):
+        return values
+    list_field: dict[Any, Any]
+
+    keys_are_str = all((isinstance(key, str) for key in list_field.keys()))
+    if not keys_are_str:
+        return values
+    list_field: dict[str, Any]
+
+    values_are_dict = all((isinstance(value, dict) for value in list_field.values()))
+    if not values_are_dict:
+        return values
+    list_field: dict[str, dict]
+
+    key: str
+    value: dict
+    for key, value in list_field.items():
+        value[field_name] = key
+
+    values[list_field_name] = list(list_field.values())
+    return values
 
 
 class OnlyOn(BaseModel):
@@ -351,6 +432,11 @@ class Config(BaseModel):
             error_obj = ParseConfigError(e)
             return Failure(error_obj)
         return Success(result)
+
+    @model_validator(mode="before")
+    @classmethod
+    def __file_name_as_key(cls, values: dict[str, Any]):
+        return field_as_key_validator(values, "files", "name")
 
     @classmethod
     def from_json_str(cls, json_str: str) -> Result["Config", ParseConfigError]:
