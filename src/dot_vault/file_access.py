@@ -16,8 +16,8 @@ LOGGER = logging.getLogger()
 
 @safe(exceptions=(OSError,))
 def mkdir(path: Path, parents: bool = False, exist_ok: bool = False) -> Path:
-    path.mkdir(parnest=parents, exist_ok=exist_ok)
-    return Path
+    path.mkdir(parents=parents, exist_ok=exist_ok)
+    return path
 
 
 class CouldNotDetermineHostname(Exception):
