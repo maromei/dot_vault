@@ -36,3 +36,8 @@ check = [
     "hatch run test",
     "hatch run typecheck"
 ]
+
+[tool.pyrefly]
+project-includes = ["src"]
+search-path = ["src"]
+python-interpreter-path = ".venv/bin/python3"
