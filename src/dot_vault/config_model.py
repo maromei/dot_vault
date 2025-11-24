@@ -86,17 +86,17 @@ def field_as_key_validator(
     list_field: dict[Any, Any] | UnknownObj = values[list_field_name]
     if not isinstance(list_field, dict):
         return values
-    list_field: dict[Any, Any]
+    list_field: dict[Any, Any]  # pyrefly: ignore[annotation-mismatch]
 
     keys_are_str = all((isinstance(key, str) for key in list_field.keys()))
     if not keys_are_str:
         return values
-    list_field: dict[str, Any]
+    list_field: dict[str, Any]  # pyrefly: ignore[annotation-mismatch]
 
     values_are_dict = all((isinstance(value, dict) for value in list_field.values()))
     if not values_are_dict:
         return values
-    list_field: dict[str, dict]
+    list_field: dict[str, dict]  # pyrefly: ignore[annotation-mismatch]
 
     key: str
     value: dict
