@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from pytest_mock import MockerFixture
-from returns.maybe import Maybe, Some
+from returns.maybe import Some
 from returns.pipeline import is_successful
 from returns.result import Success
 
-from dot_vault.config_model import File, OnlyOn
+from dot_vault.config_model import File
 
 LOGGER = logging.getLogger(__name__)
 
