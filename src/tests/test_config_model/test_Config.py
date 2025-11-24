@@ -72,7 +72,7 @@ class TestConfigFromJson:
 
 
 def test_file_name_as_key_validator():
-    json_obj: dict[str, str] = {
+    json_obj: dict[str, dict] = {
         "files": {
             "file_name_1": {"path": "/some/path_1", "only_on": {}},
             "file_name_2": {"path": "/some/path_2", "only_on": {}},
