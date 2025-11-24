@@ -20,7 +20,7 @@ def test_file_non_existant_path(tmp_path: Path):
     some_path = tmp_path / "does_not_exist.txt"
 
     try:
-        _ = File(path=some_path)
+        _ = File(path=some_path, name="some_name")
         assert False, "A validation Error should occur on a non-existant path."
     except ValidationError:
         assert True
@@ -31,7 +31,7 @@ def test_file_dir_as_input(tmp_path: Path):
     some_dir.mkdir()
 
     try:
-        _ = File(path=some_dir)
+        _ = File(path=some_dir, name="some_name")
         assert False, "A validation Error should occur on a directory as input."
     except ValidationError:
         assert True
@@ -43,7 +43,7 @@ def test_file_valid_input(tmp_path: Path):
         _ = file.write("Content.")
 
     try:
-        _ = File(path=some_path)
+        _ = File(path=some_path, name="some_name")
         assert True
     except ValidationError:
         assert False, "The file exists, and should be parsed without issue."
@@ -57,7 +57,7 @@ def test_name(tmp_path: Path):
     name = "some-name"
     json_obj = {"path": str(some_path.resolve()), "name": name}
     file = File.model_validate_json(json.dumps(json_obj))
-    assert file.name == Some(name)
+    assert file.name == name
 
     json_obj = {"path": str(some_path.resolve()), "name": "some name"}
     with pytest.raises(ValidationError):
@@ -80,7 +80,7 @@ class TestOnlyOnSpecification:
         are present, no file existance check will be done.
         """
 
-        json_obj = {"path": "/path/does/not/exist", "only_on": {}}  # pyright: ignore [reportUnknownVariableType]
+        json_obj = {"path": "/path/does/not/exist", "only_on": {}, "name": "name"}  # pyright: ignore [reportUnknownVariableType]
         json_str = json.dumps(json_obj)
 
         # No error should be generated here, eventhough the path does not exist.
@@ -109,6 +109,7 @@ class TestOnlyOnSpecification:
         json_obj = {
             "path": str(file_path),
             "only_on": {"username": ["user"], "hostname": ["host"]},
+            "name": "name",
         }
         json_str = json.dumps(json_obj)
 

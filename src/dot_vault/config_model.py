@@ -302,29 +302,10 @@ class File(BaseModel):
     #: for more details.
     path: FilePath
 
-    #: Internal representation of the `name` property.
+    #: Human understandable name for a file
     #:
-    #: In order for [`name`][dot_vault.config_model.File.name] to be of type
-    #: [`Maybe`][returns.maybe.Maybe], instead of just `str|None`, it has to
-    #: wrap some internal representation.
-    name_internal: str | None = Field(
-        default=None, alias="name", exclude=True, pattern=r"^[\w\-]+$"
-    )
-
-    @computed_field
-    @property
-    def name(self) -> Maybe[str]:
-        """Optional name for the file.
-
-        It is essentially an alias for the given file. The name
-        itself does not need to be unique in the config, rather it
-        should be repeated for multiple files on multiple device to
-        make sync tasks easier.
-
-        The name itself is only allowed to contain letters, digits, underscores and
-        the '-' character.
-        """
-        return Maybe.from_optional(self.name_internal)
+    #: Is allowed to contain letters, digits, underscores and the '-' character.
+    name: str = Field(pattern=r"^[\w\-]+$")
 
     @computed_field
     @property
