@@ -71,6 +71,10 @@ def get_and_create_local_dotfile_library_path(
 ) -> Result[Path, OSError | CouldNotDetermineHostname]:
     libpath: Result[Path, OSError | CouldNotDetermineHostname]
     libpath = get_local_dotfile_library_path(user=user, host=host)
+
+    # As of 'results' version 0.26.0, the `bind` function requires the
+    # mypy plugin to typehint sucessfully. --> Ignore with pyrefly.
+    # pyrefly: ignore[bad-argument-type]
     libpath = libpath.bind(lambda x: mkdir(x, parents=True, exist_ok=True))
     return libpath
 
