@@ -31,10 +31,12 @@ testlog = """
         --capture=no \
         src/tests/{args}
 """
+lint = "ruff check"
 typecheck = "pyrefly check"
 check = [
     "hatch run test",
-    "hatch run typecheck"
+    "hatch run typecheck",
+    "hatch run lint"
 ]
 
 [tool.pyrefly]
