@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def field_as_key_validator(
-    values: dict[str, Any], list_field_name: str, field_name: str
+    values: dict[str, Any] | Any, list_field_name: str, field_name: str
 ) -> dict[str, Any]:
     """Transform nested dicts to a list of dicts with the first level key as an item.
 
@@ -58,7 +58,9 @@ def field_as_key_validator(
     ```
 
     Args:
-        values: The dictionary of values being validated by Pydantic.
+        values: The dictionary of values (or any other type) being
+            validated by Pydantic. If the input is not a dictionary, it will be returned
+            as is.
         list_field_name: The name of the field in `values` that contains the nested
             dictionaries to be transformed.
         field_name: The item key, to which the first level key should be assigned.
@@ -74,6 +76,14 @@ def field_as_key_validator(
 
     """
     UnknownObj = TypeVar("UnknownObj")
+
+    if not isinstance(values, dict):
+        return values
+    values: dict  # pyrefly: ignore[annotation-mismatch]
+    keys_are_str = all((isinstance(key, str) for key in values.keys()))
+    if not keys_are_str:
+        return values
+    values: dict[str, Any]  # pyrefly: ignore[annotation-mismatch]
 
     if list_field_name not in values.keys():
         value_str: str = repr(values)
@@ -264,45 +274,49 @@ class OnlyOn(BaseModel):
         raise ValueError(error_msg)
 
 
-class File(BaseModel):
-    """A single file.
+class FileSource(BaseModel):
+    """A single file source.
 
-    The [`path`][dot_vault.config_model.File.path] will be checked for existance,
+    The class defines where a file can be found on a specific user-/ hostname
+    combination.
+
+    The [`path`][dot_vault.config_model.FileSource.path] will be checked for existance,
     if the current [`user`][dot_vault.file_access.get_username] and
     [`hostname`][dot_vault.file_access.get_hostname] combination is mentioned in the
-    [`only_on`][dot_vault.config_model.File.only_on] field, or if the
-    [`only_on`][dot_vault.config_model.File.only_on] field is not specified.
+    [`only_on`][dot_vault.config_model.FileSource.only_on] field, or if the
+    [`only_on`][dot_vault.config_model.FileSource.only_on] field is not specified.
 
     Note:
         You can pass an empty dictionary to the
-        [`only_on`][dot_vault.config_model.File.only_on] field to never check for
+        [`only_on`][dot_vault.config_model.FileSource.only_on] field to never check for
         the existance of the given file.
+
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(
         extra="forbid", arbitrary_types_allowed=True
     )
 
-    #: Internal definition for [`only_on`][dot_vault.config_model.File.only_on].
+    #: Internal definition for [`only_on`][dot_vault.config_model.FileSource.only_on].
     #
     #: Due to the path validation, this field has to be defined above the `path` field.
-    #: See [`File.check_path_only_on`][dot_vault.config_model.File.check_path_only_on].
-    only_on_internal: OnlyOn | None = Field(default=None, alias="only_on")
+    #: See [`FileSource.check_path_only_on`][dot_vault.config_model.FileSource.check_path_only_on].
+    only_on_internal: OnlyOn | None = Field(default=None, alias="only_on", exclude=True)
 
     #: The path to the file.
     #:
     #: Will be checked for existance if the current system (username / hostname) is
-    #: found in the [`only_on`][dot_vault.config_model.File.only_on] field.
+    #: found in the [`only_on`][dot_vault.config_model.FileSource.only_on] field.
     #:
     #: For the path validation via
-    #: [`File.check_path_only_on`][dot_vault.config_model.File.check_path_only_on]
+    #: [`FileSource.check_path_only_on`][dot_vault.config_model.FileSource.check_path_only_on]
     #: to work, this field has to be defined after the
-    #: [`only_on_internal`][dot_vault.config_model.File.only_on_internal] field.
-    #: See [`File.check_path_only_on`][dot_vault.config_model.File.check_path_only_on]
+    #: [`only_on_internal`][dot_vault.config_model.FileSource.only_on_internal] field.
+    #: See [`FileSource.check_path_only_on`][dot_vault.config_model.FileSource.check_path_only_on]
     #: for more details.
     path: FilePath
 
-    #: Human understandable name for a file
+    #: Human understandable name for a file source
     #:
     #: Is allowed to contain letters, digits, underscores and the '-' character.
     name: str = Field(pattern=r"^[\w\-]+$")
@@ -313,7 +327,7 @@ class File(BaseModel):
         """Defines on which username / hostname the file should be found.
 
         Property wrapper around the
-        [`only_on_internal`][dot_vault.config_model.File.only_on_internal] field,
+        [`only_on_internal`][dot_vault.config_model.FileSource.only_on_internal] field,
         to return it as a [`Maybe`][returns.maybe.Maybe] type.
 
         If the entry is not specified, it is assumed to always be found.
@@ -332,12 +346,12 @@ class File(BaseModel):
         """Validator for the file path.
 
         Checks whether the file exists, if the current username / hostname
-        is found in the [`only_on`][dot_vault.config_model.File.only_on] field or
-        if [`only_on`][dot_vault.config_model.File.only_on] is `Nothing`.
+        is found in the [`only_on`][dot_vault.config_model.FileSource.only_on] field or
+        if [`only_on`][dot_vault.config_model.FileSource.only_on] is `Nothing`.
 
-        Due to the dependency on the [`only_on`][dot_vault.config_model.File.only_on]
+        Due to the dependency on the [`only_on`][dot_vault.config_model.FileSource.only_on]
         field, it needs to be specified before the
-        [`path`][dot_vault.config_model.File.path] field, otherwise it will not
+        [`path`][dot_vault.config_model.FileSource.path] field, otherwise it will not
         be present in the `values` parameter, which will be passed to the function
         from `pydantic`.
 
@@ -394,6 +408,33 @@ class File(BaseModel):
         return path
 
 
+class FileIdentity(BaseModel):
+    """A File identity.
+
+    A config file might have the same content on multiple machines,
+    but the path to the config on each machine is different.
+    This class represents the one config file, while
+    [`FileSource`][dot_vault.config_model.FileSource] describes each
+    individual path on each machine.
+
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    #: Human understandable name for a file
+    #:
+    #: Is allowed to contain letters, digits, underscores and the '-' character.
+    name: str = Field(pattern=r"^[\w\-]+$")
+
+    #: List of potential file sources.
+    sources: list[FileSource] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def __source_name_as_key(cls, values: dict[str, Any]):
+        return field_as_key_validator(values, "sources", "name")
+
+
 @dataclass
 class ParseConfigError(Exception):
     source: ValidationError | OSError
@@ -401,7 +442,7 @@ class ParseConfigError(Exception):
 
 class Config(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
-    files: list[File] = Field(default_factory=list)
+    files: list[FileIdentity] = Field(default_factory=list)
 
     @classmethod
     def __model_validate_json_as_result(

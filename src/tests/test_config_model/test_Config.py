@@ -7,7 +7,13 @@ from pathlib import Path
 from returns.pipeline import is_successful
 from returns.result import Failure, Result, Success
 
-from dot_vault.config_model import Config, File, OnlyOn, ParseConfigError
+from dot_vault.config_model import (
+    Config,
+    FileIdentity,
+    FileSource,
+    OnlyOn,
+    ParseConfigError,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -72,18 +78,31 @@ class TestConfigFromJson:
 
 
 def test_file_name_as_key_validator():
+    """Tests both the [`Config.files`][dot_vault.config_model.Config.__file_name_as_key]
+    name as key validator, aswell as the
+    [`FileIdentity.sources`][dot_vault.config_model.FileIdentity.__source_name_as_key]
+    name as key validator.
+    """
+
     json_obj: dict[str, dict] = {
         "files": {
-            "file_name_1": {"path": "/some/path_1", "only_on": {}},
-            "file_name_2": {"path": "/some/path_2", "only_on": {}},
+            "file_name_1": {
+                "sources": {"source1": {"path": "/some/path_1", "only_on": {}}}
+            },
+            "file_name_2": {
+                "sources": {"source2": {"path": "/some/path_2", "only_on": {}}}
+            },
         }
     }
     json_str: str = json.dumps(json_obj)
 
+    source1 = FileSource(path="/some/path_1", only_on=OnlyOn(), name="source1")
+    source2 = FileSource(path="/some/path_2", only_on=OnlyOn(), name="source2")
+
     expected_file_list = Config(
         files=(
-            File(name="file_name_1", path="/some/path_1", only_on=OnlyOn()),
-            File(name="file_name_2", path="/some/path_2", only_on=OnlyOn()),
+            FileIdentity(name="file_name_1", sources=[source1]),
+            FileIdentity(name="file_name_2", sources=[source2]),
         )
     )
 

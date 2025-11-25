@@ -1,4 +1,4 @@
-"""Tests specifically for the [`File`][dot_vault.config_model.File] pydantic model."""
+"""Tests specifically for the [`FileSource`][dot_vault.config_model.FileSource] pydantic model."""
 
 import json
 import logging
@@ -7,11 +7,10 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from pytest_mock import MockerFixture
-from returns.maybe import Some
 from returns.pipeline import is_successful
 from returns.result import Success
 
-from dot_vault.config_model import File
+from dot_vault.config_model import FileSource
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ def test_file_non_existant_path(tmp_path: Path):
     some_path = tmp_path / "does_not_exist.txt"
 
     try:
-        _ = File(path=some_path, name="some_name")
+        _ = FileSource(path=some_path, name="some_name")
         assert False, "A validation Error should occur on a non-existant path."
     except ValidationError:
         assert True
@@ -31,7 +30,7 @@ def test_file_dir_as_input(tmp_path: Path):
     some_dir.mkdir()
 
     try:
-        _ = File(path=some_dir, name="some_name")
+        _ = FileSource(path=some_dir, name="some_name")
         assert False, "A validation Error should occur on a directory as input."
     except ValidationError:
         assert True
@@ -43,7 +42,7 @@ def test_file_valid_input(tmp_path: Path):
         _ = file.write("Content.")
 
     try:
-        _ = File(path=some_path, name="some_name")
+        _ = FileSource(path=some_path, name="some_name")
         assert True
     except ValidationError:
         assert False, "The file exists, and should be parsed without issue."
@@ -56,21 +55,21 @@ def test_name(tmp_path: Path):
 
     name = "some-name"
     json_obj = {"path": str(some_path.resolve()), "name": name}
-    file = File.model_validate_json(json.dumps(json_obj))
+    file = FileSource.model_validate_json(json.dumps(json_obj))
     assert file.name == name
 
     json_obj = {"path": str(some_path.resolve()), "name": "some name"}
     with pytest.raises(ValidationError):
-        _ = File.model_validate_json(json.dumps(json_obj))
+        _ = FileSource.model_validate_json(json.dumps(json_obj))
 
 
 class TestOnlyOnSpecification:
     """Test if path validation works.
 
-    The [`File.path`][dot_vault.config_model.File.path] will only check if the file
+    The [`FileSource.path`][dot_vault.config_model.FileSource.path] will only check if the file
     exists, if it mentioned in the
-    [`File.only_on`][dot_vault.config_model.File.only_on] field. If the
-    [`File.only_on`][dot_vault.config_model.File.only_on] field is not specified,
+    [`FileSource.only_on`][dot_vault.config_model.FileSource.only_on] field. If the
+    [`FileSource.only_on`][dot_vault.config_model.FileSource.only_on] field is not specified,
     existance will always be checked. That case is implicitely checked by all tests
     outside of this class, which is why they are not repeated.
     """
@@ -84,7 +83,7 @@ class TestOnlyOnSpecification:
         json_str = json.dumps(json_obj)
 
         # No error should be generated here, eventhough the path does not exist.
-        file = File.model_validate_json(json_str)
+        file = FileSource.model_validate_json(json_str)
 
         assert is_successful(file.only_on)
         assert isinstance(file.path, Path)
@@ -113,7 +112,7 @@ class TestOnlyOnSpecification:
         }
         json_str = json.dumps(json_obj)
 
-        file = File.model_validate_json(json_str)
+        file = FileSource.model_validate_json(json_str)
         assert is_successful(file.only_on)
         assert file.path == file_path
 
@@ -137,7 +136,7 @@ class TestOnlyOnSpecification:
 
         error_match = r".*Path does not point to a file.*"
         with pytest.raises(ValidationError, match=error_match):
-            _ = File.model_validate_json(json_str)
+            _ = FileSource.model_validate_json(json_str)
 
     def test_no_verify_path_exception(self):
         """The `only_on` field is specified, but the current user@host combination
@@ -151,4 +150,4 @@ class TestOnlyOnSpecification:
 
         error_match = r".*argument should be a str or an os\.PathLike object.*"
         with pytest.raises(ValidationError, match=error_match):
-            _ = File.model_validate_json(json_str)
+            _ = FileSource.model_validate_json(json_str)
