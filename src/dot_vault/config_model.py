@@ -407,6 +407,27 @@ class FileSource(BaseModel):
 
         return path
 
+    def is_allowed(
+        self, username: str | None = None, hostname: str | None = None
+    ) -> bool:
+        """Is the file expected to be found on the user / hostname combination?
+
+        Wrapper for the [`only_on.is_allowed()`] function.
+
+        Args:
+            username: Can be `None` if only the hostname should be checked.
+            hostname: Can be `None` if only the username should be checked.
+
+        Returns:
+            Result of [`only_on.is_allowed()`]. If `only_on` is `Nothing`,
+            `True` will be returned.
+        """
+        allowed: Maybe[bool] = Maybe.do(
+            only_on.is_allowed(username=username, hostname=hostname)
+            for only_on in self.only_on
+        )
+        return allowed.value_or(True)
+
 
 class FileIdentity(BaseModel):
     """A File identity.
