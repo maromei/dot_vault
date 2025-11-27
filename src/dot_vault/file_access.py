@@ -133,9 +133,9 @@ def path_as_relative(path: Path) -> Result[Path, LongWindowsPathPrefixNotSupport
         posix_path = posix_path.replace(drive_letter, "", count=1)
         drive_letter = drive_letter.rstrip(":")
 
-    path: Path = Path(posix_path).resolve()
+    path = Path(posix_path).resolve()
     path_root: str = path.root
-    path_str: str = str(path)
+    path_str = str(path)
 
     path_relative_str: str = path_str.replace(path_root, "", count=1).lstrip("/\\")
     path_relative: Path = Path(path_relative_str)
