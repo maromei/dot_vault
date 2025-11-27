@@ -2,7 +2,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Final, TypeVar, cast
+from typing import Any, Callable, ClassVar, Final, cast
 
 from pydantic import (
     BaseModel,
@@ -75,10 +75,10 @@ def field_as_key_validator(
         ValueError: If `list_field_name` is not found in the `values` dictionary.
 
     """
-    UnknownObj = TypeVar("UnknownObj")
 
     if not isinstance(values, dict):
         return values
+
     values: dict  # type: ignore[no-redef] # pyrefly: ignore[annotation-mismatch]
     keys_are_str = all((isinstance(key, str) for key in values.keys()))
     if not keys_are_str:
@@ -93,7 +93,7 @@ def field_as_key_validator(
             f"dictionary:\n{value_str}"
         )
 
-    list_field: dict[Any, Any] | UnknownObj = values[list_field_name]
+    list_field: dict[Any, Any] | Any = values[list_field_name]
     if not isinstance(list_field, dict):
         return values
     list_field: dict[Any, Any]  # type: ignore[no-redef] # pyrefly: ignore[annotation-mismatch]
