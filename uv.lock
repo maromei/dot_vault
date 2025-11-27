@@ -218,7 +218,7 @@ wheels = [
 
 [[package]]
 name = "dot-vault"
-version = "0.1.0"
+version = "0.0.2"
 source = { virtual = "." }
 dependencies = [
     { name = "pydantic" },
@@ -229,6 +229,7 @@ dependencies = [
 dev = [
     { name = "hatch" },
     { name = "ipython" },
+    { name = "mypy" },
     { name = "pyrefly" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
@@ -245,6 +246,7 @@ requires-dist = [
 dev = [
     { name = "hatch", specifier = ">=1.15.1" },
     { name = "ipython", specifier = ">=9.7.0" },
+    { name = "mypy", specifier = ">=1.17.1" },
     { name = "pyrefly", specifier = ">=0.42.3" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "pytest-mock", specifier = ">=3.15.1" },
