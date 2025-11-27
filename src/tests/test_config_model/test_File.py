@@ -50,8 +50,8 @@ def test_file_valid_input(tmp_path: Path):
 
 def test_name(tmp_path: Path):
     some_path = tmp_path / "some_file.txt"
-    with open(some_path, "w+") as file:
-        _ = file.write("Content.")
+    with open(some_path, "w+") as f:
+        _ = f.write("Content.")
 
     name = "some-name"
     json_obj = {"path": str(some_path.resolve()), "name": name}

@@ -96,14 +96,14 @@ def test_file_name_as_key_validator():
     }
     json_str: str = json.dumps(json_obj)
 
-    source1 = FileSource(path="/some/path_1", only_on=OnlyOn(), name="source1")
-    source2 = FileSource(path="/some/path_2", only_on=OnlyOn(), name="source2")
+    source1 = FileSource(path=Path("/some/path_1"), only_on=OnlyOn(), name="source1")
+    source2 = FileSource(path=Path("/some/path_2"), only_on=OnlyOn(), name="source2")
 
     expected_file_list = Config(
-        files=(
+        files=[
             FileIdentity(name="file_name_1", sources=[source1]),
             FileIdentity(name="file_name_2", sources=[source2]),
-        )
+        ]
     )
 
     parsed_config_result = Config.from_json_str(json_str)
