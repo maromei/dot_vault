@@ -321,7 +321,7 @@ class FileSource(BaseModel):
     #: Is allowed to contain letters, digits, underscores and the '-' character.
     name: str = Field(pattern=r"^[\w\-]+$")
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def only_on(self) -> Maybe[OnlyOn]:
         """Defines on which username / hostname the file should be found.
