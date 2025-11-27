@@ -3,8 +3,9 @@ import os
 import platform
 import re
 from pathlib import Path, PureWindowsPath
-from typing import Self, Type
+from typing import Callable, Self, Type
 
+from returns.curry import partial
 from returns.maybe import Maybe
 from returns.result import Failure, Result, Success, safe
 
@@ -69,13 +70,23 @@ def get_local_dotfile_library_path(
 def get_and_create_local_dotfile_library_path(
     user: str | None = None, host: str | None = None
 ) -> Result[Path, OSError | CouldNotDetermineHostname]:
-    libpath: Result[Path, OSError | CouldNotDetermineHostname]
-    libpath = get_local_dotfile_library_path(user=user, host=host)
+    """Get the path to the local dotfile library, and create it if it does not exist.
 
-    # As of 'results' version 0.26.0, the `bind` function requires the
-    # mypy plugin to typehint sucessfully. --> Ignore with pyrefly.
-    # pyrefly: ignore[bad-argument-type]
-    libpath = libpath.bind(lambda x: mkdir(x, parents=True, exist_ok=True))
+    Args:
+        user: See [`get_local_dotfile_library_path`][]
+        host: See [`get_local_dotfile_library_path`][]
+
+    Returns:
+        The Path itself or an error if either the path could not be created
+        or something went wrong with [`get_local_dotfile_library_path`][].
+    """
+
+    PathOrError = Result[Path, OSError | CouldNotDetermineHostname]
+    libpath: PathOrError = get_local_dotfile_library_path(user=user, host=host)
+
+    f: Callable[[Path], PathOrError] = partial(mkdir, parents=True, exist_ok=True)
+    libpath = libpath.bind(f)
+
     return libpath
 
 
