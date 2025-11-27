@@ -10,8 +10,11 @@ wheels/
 .coverage
 .pytest_cache/
 
-# Virtual environments
+# dev dot-directories created by python tools
 .venv
+.mypy_cache
+.ruff_cache
+.mypy_html_report
 
 # Temporary directories
 tmp/
