@@ -6,21 +6,25 @@ from returns.maybe import Maybe, Nothing, Some
 from returns.result import Result
 
 from dot_vault.config_model import Config, ParseConfigError
-from dot_vault.filter import __combine_possible_scalar_and_list, filter_files_on_config
+from dot_vault.filter import (
+    FileFilter,
+    _combine_possible_scalar_and_list,
+    filter_files_on_config,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 
 def test_combine_possible_scalar_and_list():
-    assert __combine_possible_scalar_and_list(1, None) == Some([1])
-    assert __combine_possible_scalar_and_list(None, [2, 3]) == Some([2, 3])
-    assert __combine_possible_scalar_and_list(1, [2, 3]) == Some([1, 2, 3])
-    assert __combine_possible_scalar_and_list(None, None) == Nothing
+    assert _combine_possible_scalar_and_list(1, None) == Some([1])
+    assert _combine_possible_scalar_and_list(None, [2, 3]) == Some([2, 3])
+    assert _combine_possible_scalar_and_list(1, [2, 3]) == Some([1, 2, 3])
+    assert _combine_possible_scalar_and_list(None, None) == Nothing
 
 
 def test_combine_possible_scalar_and_list_mutability():
     list_: list[int] = [2, 3]
-    result: Maybe[list[int]] = __combine_possible_scalar_and_list(1, list_)
+    result: Maybe[list[int]] = _combine_possible_scalar_and_list(1, list_)
     assert list_ == [2, 3]
     assert result == Some([1, 2, 3])
 
@@ -28,7 +32,7 @@ def test_combine_possible_scalar_and_list_mutability():
 def test_combine_possible_scalar_and_list_nested_mutability():
     list_: list[list[str]] = [["2.1", "2.2"], ["3.1", "3.2"]]
     scalar: list[str] = ["1.1", "1.2"]
-    result: Maybe[list[list[str]]] = __combine_possible_scalar_and_list(scalar, list_)
+    result: Maybe[list[list[str]]] = _combine_possible_scalar_and_list(scalar, list_)
     assert list_ == [["2.1", "2.2"], ["3.1", "3.2"]]
     assert result == Some([["1.1", "1.2"], ["2.1", "2.2"], ["3.1", "3.2"]])
 
@@ -70,7 +74,8 @@ def test_config_filter(tmp_path: Path):
     config_result: Result[Config, ParseConfigError] = Config.from_json_str(json_str)
     config: Config = config_result.unwrap()
 
-    filtered_config: Config = filter_files_on_config(config, user="pommy")
+    filter_specs: FileFilter = FileFilter(user="pommy")
+    filtered_config: Config = filter_files_on_config(config, filter_specs)
     expected_filenames = ["file1", "file2"]
     expected_sourcenames = ["source1-1", "source1-3", "sources2-1"]
 
@@ -83,7 +88,8 @@ def test_config_filter(tmp_path: Path):
     ] == expected_sourcenames
     # fmt: on
 
-    filtered_config = filter_files_on_config(config, user="pommy", file="file1")
+    filter_specs = FileFilter(user="pommy", file="file1")
+    filtered_config = filter_files_on_config(config, filter_specs)
     expected_filenames = ["file1"]
     expected_sourcenames = ["source1-1", "source1-3"]
 
@@ -97,7 +103,8 @@ def test_config_filter(tmp_path: Path):
     # fmt: on
 
     # shoulde be empty due to empty {} definition on only_on
-    filtered_config = filter_files_on_config(config, source="source1-2")
+    filter_specs = FileFilter(source="source1-2")
+    filtered_config = filter_files_on_config(config, filter_specs)
     expected_filenames = []
     expected_sourcenames = []
 
@@ -110,7 +117,8 @@ def test_config_filter(tmp_path: Path):
     ] == expected_sourcenames
     # fmt: on
 
-    filtered_config = filter_files_on_config(config, source="source1-1")
+    filter_specs = FileFilter(source="source1-1")
+    filtered_config = filter_files_on_config(config, filter_specs)
     expected_filenames = ["file1"]
     expected_sourcenames = ["source1-1"]
 
@@ -123,9 +131,8 @@ def test_config_filter(tmp_path: Path):
     ] == expected_sourcenames
     # fmt: on
 
-    filtered_config = filter_files_on_config(
-        config, source="source1-1", remove_empty_identities=False
-    )
+    filter_specs = FileFilter(source="source1-1", remove_empty_identities=False)
+    filtered_config = filter_files_on_config(config, filter_specs)
     expected_filenames = ["file1", "file2"]
     expected_sourcenames = ["source1-1"]
 
