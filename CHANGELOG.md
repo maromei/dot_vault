@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.0.3] - 2025-11-28
+
+### Added
+
+- Added functions to filter file identities and sources.
+    - `dot_vault.filter` module.
+    - `filter_sources_on_file()`
+    - `filter_files_on_config()`
+- Added `FileSource.is_allowed()` as a wrapper for `OnlyOn.is_allowed()`.
+
+### Fixes
+
+- Fixed `mkdir`
+    - Before it did not work at all.
+
+### Misc
+
+- Added Docstring to `get_and_create_local_dotfile_library_path()`
+
+### Dev
+
+- Added some dot-directories created by python tooling to be ignored.
+- Added `mypy` as a typechecker alongside `pyrefly`
+    - The `hatch` `typecheck` script now consists of calls to both `mypy` and
+     `pyrefly`.
+- Fixed some type incosistencies
+- Added `dot_vault.filter__combine_possible_scalar_and_list()`
+    - A utility for combining scalars and lists.
+    - Crated to be used in filter functions.
+
 ## [0.0.2] - 2025-11-25
 
 ### Add
