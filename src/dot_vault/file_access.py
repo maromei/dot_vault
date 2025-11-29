@@ -3,6 +3,7 @@ import os
 import platform
 import re
 from pathlib import Path, PureWindowsPath
+from shutil import SameFileError, copyfile
 from typing import Callable, Self, Type
 
 from returns.curry import partial
@@ -13,6 +14,40 @@ from dot_vault.constants import LIB_NAME
 from dot_vault.xdg_directories import XDGUserDirectories
 
 LOGGER = logging.getLogger()
+
+
+def copy_file(
+    source: Path, destination: Path, follow_symlinks: bool = True
+) -> Result[Path, IOError | SameFileError]:
+    """Result-safe copy file function.
+
+    Wraps [`shutil.copyfile`][]. It is intentional that the function is not defined
+    using the [`retruns.result.safe`][] decorator, because as of `returns` version
+    `0.26.0`, the decorator does not correctly relay typing information if more
+    than one exception is specified in the list.
+
+    Args:
+        source:
+        desitnation:
+        follow_symlinks:
+
+    Returns:
+        The `Some(..)` of the path to the destination file if everything succeed.
+        Otherwise `Failure(..)` of the given types.
+    """
+
+    # explicit typehinting is not done here to avoid retyping the type definitions.
+    # The typechecker will complain if the function signature and the list below does
+    # not match.
+    # Simply specifying tuple[type[Exception], ...] or something similar will result in
+    # an error when trying to return the failure, since the path is to generic.
+    types_to_check = (IOError, SameFileError)
+
+    try:
+        dst: Path = Path(copyfile(source, destination, follow_symlinks=follow_symlinks))
+        return Success(dst)
+    except types_to_check as e:
+        return Failure(e)
 
 
 @safe(exceptions=(OSError,))
