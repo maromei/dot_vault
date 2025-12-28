@@ -1,8 +1,9 @@
 import logging
 import re
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Final, cast
+from typing import Any, Callable, ClassVar, Final, cast, Self
 
 from pydantic import (
     BaseModel,
@@ -454,6 +455,31 @@ class FileIdentity(BaseModel):
     @classmethod
     def __source_name_as_key(cls, values: dict[str, Any]):
         return field_as_key_validator(values, "sources", "name")
+
+    @model_validator(mode="after")
+    def _check_source_names_are_unique(self) -> Self:
+        """Pydantic Validator - Checks that the source names are unique."""
+
+        name_counter: dict[str, int] = dict()
+        for source in self.sources:
+            if source.name in name_counter.keys():
+                name_counter[source.name] += 1
+            else:
+                name_counter[source.name] = 1
+
+        non_unique_names: dict[str, int] = {
+            name: counter for name, counter in name_counter.items() if counter > 1
+        }
+
+        if len(non_unique_names) == 0:
+            return self
+
+        error_message: str = (
+            "Found multiple sources with the same names for the "
+            f"for the identity '{self.name}': "
+            f"{json.dumps(non_unique_names)}"
+        )
+        raise ValueError(error_message)
 
 
 @dataclass
