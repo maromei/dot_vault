@@ -58,3 +58,8 @@ check_untyped_defs = true
 module = ["pytest.*", "pytest_mock.*"]
 follow_untyped_imports = true
 ignore_missing_imports = true
+
+[tool.ruff.lint]
+ignore = [
+    "E701",  # enables lines like 'case Succes(value): pass' to unpack in match
+]
