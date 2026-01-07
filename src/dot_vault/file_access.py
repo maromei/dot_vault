@@ -4,7 +4,7 @@ import platform
 import re
 from pathlib import Path, PureWindowsPath
 from shutil import SameFileError, copyfile
-from typing import Callable, Self, Type
+from typing import Callable, Self, Type, Union
 
 from returns.curry import partial
 from returns.maybe import Maybe
@@ -15,10 +15,13 @@ from dot_vault.xdg_directories import XDGUserDirectories
 
 LOGGER = logging.getLogger()
 
+#: Possible Errors in [`copy_file`][]
+CopyFileError = Union[OSError, SameFileError]
+
 
 def copy_file(
     source: Path, destination: Path, follow_symlinks: bool = True
-) -> Result[Path, IOError | SameFileError]:
+) -> Result[Path, CopyFileError]:
     """Result-safe copy file function.
 
     Wraps [`shutil.copyfile`][]. It is intentional that the function is not defined
@@ -27,9 +30,9 @@ def copy_file(
     than one exception is specified in the list.
 
     Args:
-        source:
-        desitnation:
-        follow_symlinks:
+        source: Passed to [`shutil.copyfile(src)`][shutil.copyfile]
+        destination: Passed to [`shutil.copyfile(dst)`][shutil.copyfile]
+        follow_symlinks: Passed to [`shutil.copyfile(follow_symlinks)`][shutil.copyfile]
 
     Returns:
         The `Some(..)` of the path to the destination file if everything succeed.
